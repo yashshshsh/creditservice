@@ -40,6 +40,7 @@ public class MerchantAnalyticsService implements IMerchantAnalyticsService {
                     BigDecimal.ZERO,
                     0,
                     BigDecimal.ZERO,
+                    BigDecimal.ZERO,
                     BigDecimal.ZERO
             );
         }
@@ -61,13 +62,17 @@ public class MerchantAnalyticsService implements IMerchantAnalyticsService {
         BigDecimal weekendTransactionRatio =
                 calculateWeekendRatio(transactions);
 
+        BigDecimal revenueTrend =
+                calculateRevenueTrend(merchantId, endDate);
+
         return new MerchantFeatures(
                 merchantId,
                 revenueLast30Days,
                 averageTransactionValue,
                 transactions.size(),
                 revenueVolatility,
-                weekendTransactionRatio
+                weekendTransactionRatio,
+                revenueTrend
         );
     }
 
@@ -107,8 +112,9 @@ public class MerchantAnalyticsService implements IMerchantAnalyticsService {
         long weekendTransactions = transactions.stream()
                 .filter(transaction -> {
 
-                    DayOfWeek day = transaction.getTransactionDate()
-                            .getDayOfWeek();
+                    DayOfWeek day =
+                            transaction.getTransactionDate()
+                                    .getDayOfWeek();
 
                     return day == DayOfWeek.SATURDAY
                             || day == DayOfWeek.SUNDAY;
@@ -118,6 +124,58 @@ public class MerchantAnalyticsService implements IMerchantAnalyticsService {
         return BigDecimal.valueOf(weekendTransactions)
                 .divide(
                         BigDecimal.valueOf(transactions.size()),
+                        4,
+                        RoundingMode.HALF_UP
+                );
+    }
+
+    private BigDecimal calculateRevenueTrend(
+            Long merchantId,
+            LocalDateTime endDate) {
+
+        LocalDateTime recentStart =
+                endDate.minusDays(15);
+
+        LocalDateTime previousStart =
+                endDate.minusDays(30);
+
+        List<Transaction> recentTransactions =
+                transactionRepository
+                        .findByMerchant_IdAndTransactionDateBetween(
+                                merchantId,
+                                recentStart,
+                                endDate
+                        );
+
+        List<Transaction> previousTransactions =
+                transactionRepository
+                        .findByMerchant_IdAndTransactionDateBetween(
+                                merchantId,
+                                previousStart,
+                                recentStart
+                        );
+
+        BigDecimal recentRevenue = recentTransactions.stream()
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal previousRevenue = previousTransactions.stream()
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (previousRevenue.compareTo(BigDecimal.ZERO) == 0) {
+
+            if (recentRevenue.compareTo(BigDecimal.ZERO) > 0) {
+                return BigDecimal.ONE;
+            }
+
+            return BigDecimal.ZERO;
+        }
+
+        return recentRevenue
+                .subtract(previousRevenue)
+                .divide(
+                        previousRevenue,
                         4,
                         RoundingMode.HALF_UP
                 );

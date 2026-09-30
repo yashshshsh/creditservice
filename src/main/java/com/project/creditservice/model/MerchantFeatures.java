@@ -20,4 +20,6 @@ public class MerchantFeatures {
     private BigDecimal revenueVolatility;
 
     private BigDecimal weekendTransactionRatio;
+
+    private BigDecimal revenueTrend;
 }
