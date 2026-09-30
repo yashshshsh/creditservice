@@ -38,11 +38,12 @@ def generate_dataset():
 
         revenue_trend = np.random.uniform(-0.8, 1.0)
 
-        # Simple synthetic risk-generation logic.
-        # Higher revenue and positive growth reduce risk.
-        # High volatility increases risk.
+        # Synthetic creditworthiness logic.
+        # Higher revenue, transaction activity and positive growth
+        # indicate stronger creditworthiness.
+        # Higher volatility and weekend concentration reduce it.
 
-        risk_score = (
+        creditworthiness_score = (
             0.35 * (revenue_last_30_days / 500000)
             + 0.20 * (transaction_count / 500)
             + 0.15 * (average_transaction_value / 25000)
@@ -51,9 +52,14 @@ def generate_dataset():
             - 0.10 * weekend_transaction_ratio
         )
 
-        probability = 1 / (1 + np.exp(-5 * risk_score))
+        probability_of_default = (
+            1 / (1 + np.exp(-5 * creditworthiness_score))
+        )
 
-        default = np.random.binomial(1, 1 - probability)
+        default = np.random.binomial(
+            1,
+            1 - probability_of_default
+        )
 
         data.append([
             revenue_last_30_days,
