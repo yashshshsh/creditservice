@@ -1,4 +1,4 @@
-package com.project.credit_service;
+package com.project.creditservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
