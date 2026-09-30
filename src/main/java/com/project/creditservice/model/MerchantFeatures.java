@@ -11,15 +11,13 @@ public class MerchantFeatures {
 
     private Long merchantId;
 
-    private BigDecimal totalRevenue;
+    private BigDecimal revenueLast30Days;
 
     private BigDecimal averageTransactionValue;
 
     private Integer transactionCount;
 
     private BigDecimal revenueVolatility;
-
-    private BigDecimal monthlyRevenue;
 
     private BigDecimal weekendTransactionRatio;
 }
