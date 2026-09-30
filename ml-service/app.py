@@ -2,10 +2,12 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import joblib
 import pandas as pd
+import shap
 
 app = FastAPI(title="Merchant Credit Scoring Service")
 
 model = joblib.load("models/credit_risk_model.pkl")
+explainer = shap.TreeExplainer(model)
 
 
 class MerchantFeatures(BaseModel):
@@ -18,11 +20,17 @@ class MerchantFeatures(BaseModel):
     revenueTrend: float
 
 
+class FeatureContribution(BaseModel):
+    feature: str
+    contribution: float
+
+
 class CreditScoreResponse(BaseModel):
     merchantId: int
     creditScore: int
     recommendedLoanAmount: float
     riskLevel: str
+    featureContributions: list[FeatureContribution]
 
 
 @app.get("/health")
@@ -62,9 +70,33 @@ def score_merchant(features: MerchantFeatures):
         2
     )
 
+    shap_values = explainer.shap_values(input_data)
+
+    if isinstance(shap_values, list):
+        contributions = shap_values[1][0]
+    else:
+        contributions = shap_values[0]
+
+    feature_contributions = [
+        FeatureContribution(
+            feature=feature,
+            contribution=round(float(contribution), 4)
+        )
+        for feature, contribution in zip(
+            input_data.columns,
+            contributions
+        )
+    ]
+
+    feature_contributions.sort(
+        key=lambda item: abs(item.contribution),
+        reverse=True
+    )
+
     return CreditScoreResponse(
         merchantId=features.merchantId,
         creditScore=credit_score,
         recommendedLoanAmount=recommended_loan_amount,
-        riskLevel=risk_level
+        riskLevel=risk_level,
+        featureContributions=feature_contributions
     )
